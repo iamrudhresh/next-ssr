@@ -1,36 +1,127 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# **Next.js Server-Side Rendering (SSR) Guide**
 
-## Getting Started
+This guide explains how to implement **Server-Side Rendering (SSR)** in Next.js using both:
+1. **Pages Router (`pages/` directory) - Uses `getServerSideProps`**
+2. **App Router (`app/` directory) - Uses Server Components**
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## **📌 1. SSR with Pages Router (`pages/` directory)**
+
+**How it Works:**
+- You define a function called `getServerSideProps`.
+- This function runs **on every request**, fetches data on the **server**, and sends it to the page as props.
+
+### **Step 1: Create a Page with `getServerSideProps`**
+
+Create a new file **`pages/ssr.js`**:
+
+```jsx
+export async function getServerSideProps() {
+  const res = await fetch('https://jsonplaceholder.typicode.com/posts/1');
+  const post = await res.json();
+
+  return {
+    props: {
+      post, // Data is passed to the component as props
+    },
+  };
+}
+
+export default function SSRPage({ post }) {
+  return (
+    <div>
+      <h1>Server-Side Rendering with getServerSideProps</h1>
+      <h2>{post.title}</h2>
+      <p>{post.body}</p>
+    </div>
+  );
+}
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### **Step 2: Run the Project & Test SSR**
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+1. Start the server:
+   ```bash
+   npm run dev
+   ```
+2. Open **http://localhost:3000/ssr** in your browser.
+3. The page will show **pre-rendered data** fetched on the server.
+4. Refresh the page and check **Network Tab → Fetch/XHR**. You **won’t see the fetch request** because it happens on the server before the page loads.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## **📌 2. SSR with App Router (`app/` directory)**
 
-To learn more about Next.js, take a look at the following resources:
+**How it Works:**
+- Server Components are used **by default**.
+- You can directly fetch data inside the component **without `getServerSideProps`**.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### **Step 1: Create an SSR Page in `app/ssr/page.js`**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Create a new file **`app/ssr/page.js`**:
 
-## Deploy on Vercel
+```jsx
+export default async function SSRPage() {
+  const res = await fetch('https://jsonplaceholder.typicode.com/posts/1', {
+    cache: 'no-store', // Ensures fresh data on every request
+  });
+  const post = await res.json();
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+  return (
+    <div>
+      <h1>Server-Side Rendering in Next.js App Router</h1>
+      <h2>{post.title}</h2>
+      <p>{post.body}</p>
+    </div>
+  );
+}
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### **Step 2: Run the Project & Test SSR**
+
+1. Start the server:
+   ```bash
+   npm run dev
+   ```
+2. Open **http://localhost:3000/ssr** in your browser.
+3. The page will **load pre-rendered data**.
+4. Refresh the page and **check the Terminal logs** (since it runs on the server).
+
+---
+
+## **🔍 Key Differences Between Pages Router & App Router**
+
+| Feature | `getServerSideProps` (Pages Router) | Server Components (App Router) |
+|---------|----------------------------------|----------------------------|
+| **Where does it work?** | `pages/` directory | `app/` directory |
+| **How is data fetched?** | In `getServerSideProps` function | Directly in the component |
+| **Fetch Request Visible in DevTools?** | ❌ No (happens before page loads) | ❌ No (happens before page loads) |
+| **Revalidation Support?** | ❌ No (always fetches fresh data) | ✅ Yes (`revalidate: 10`) |
+| **Recommended for new projects?** | ❌ No (old approach) | ✅ Yes (modern approach) |
+
+---
+
+## **🚀 When to Use SSR?**
+✅ **Use SSR (`cache: 'no-store'`) when:**
+- You need **real-time data** (e.g., live stock prices, latest news).
+- You want **fresh content on every request**.
+- You need **SEO benefits**.
+
+✅ **Use ISR (`revalidate: 10`) when:**
+- You want to fetch **dynamic data** but allow caching for a short time.
+- Example:
+  ```jsx
+  const res = await fetch('https://jsonplaceholder.typicode.com/posts/1', {
+    next: { revalidate: 10 }, // Fetch fresh data every 10 seconds
+  });
+  ```
+
+---
+
+## **🎯 Conclusion**
+✅ **If you are starting a new Next.js project, use the App Router (`app/`).**
+❌ **If you are working with an old project (`pages/`), `getServerSideProps` is required.**
+
+Would you like to add an interactive **Client Component** that fetches new data dynamically? 🚀
+
